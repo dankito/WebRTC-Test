@@ -1,11 +1,12 @@
 import type { WebRtcClient } from "./WebRtcClient"
 import Peer from "peerjs"
+import { LogService } from "../../service/LogService"
 
 export class PeerJsWebRtcClient implements WebRtcClient {
 
   private readonly peer: Peer
 
-  constructor(ownId: string) {
+  constructor(ownId: string, private readonly log: LogService) {
     this.peer = new Peer(ownId)
 
     this.waitForConnections()
@@ -14,11 +15,11 @@ export class PeerJsWebRtcClient implements WebRtcClient {
 
   waitForConnections() {
     this.peer.on("open", id => {
-      console.log("Opened connection to peer", id)
+      this.log.info("Opened connection to peer", id)
     })
 
     this.peer.on("connection", connection => {
-      console.log("Peer connected", typeof connection, connection)
+      this.log.info("Peer connected", typeof connection, connection)
 
       this.connectionOpened(connection)
 
@@ -37,21 +38,21 @@ export class PeerJsWebRtcClient implements WebRtcClient {
 
       this.connectionOpened(connection)
     } catch (e) {
-      console.log(`Could not connect to peer '${id}'`, e)
+      this.log.error(`Could not connect to peer '${id}'`, e)
     }
   }
 
   private connectionOpened(connection: any) {
     connection.on("data", data => {
-      console.log("Connected to Peer", data)
+      this.log.info("Connected to Peer", data)
     })
 
     connection.on("error", error => {
-      console.error("Error occurred on connection", error, connection)
+      this.log.error("Error occurred on connection", error, connection)
     })
 
     connection.on("close", () => {
-      console.log("Connection closed", connection)
+      this.log.info("Connection closed", connection)
     })
   }
 }
