@@ -10,11 +10,13 @@
   import type { ConnectedPeer } from "../../ts/model/ConnectedPeer"
   import { WebRtcErrorDomain } from "../../ts/clients/webrtc/WebRtcErrorDomain"
 
+  let isConnected: boolean = $state(false)
+
   let ownId: string = $state("")
   let openButtonDisabled: boolean = $derived(ownId.trim().length == 0)
 
   let idToConnectTo: string = $state("")
-  let connectButtonDisabled: boolean = $derived(idToConnectTo.trim().length == 0)
+  let connectButtonDisabled: boolean = $derived(isConnected == false || idToConnectTo.trim().length == 0)
 
   let receivedMessages: string[] = $state([])
 
@@ -22,6 +24,7 @@
 
   const listener: WebRtcListener = {
     connectionOpened(ownId: string): void {
+      isConnected = true
       addMessage(`Connection successfully opened, others can now connect to you by id '${ownId}'`)
     },
 
@@ -60,6 +63,7 @@
     },
 
     disconnected(): void {
+      isConnected = false
       addMessage("Disconnected. Sending and receiving messages is not possible anymore.")
     },
   }
@@ -95,12 +99,10 @@
       <Button title="Open" classes="shrink-0 !w-[105px] md:!w-[115px] h-10 ml-2" disabled={openButtonDisabled} onClick={openForConnections} />
     </div>
 
-    <div>
-      <div class="flex items-center h-10 my-1">
-        <div class="shrink-0 w-[74px] md:w-[92px] mr-2">Connect to</div>
-        <TextInput inputClasses="grow min-w-0 h-full" placeholder="Peer ID" bind:value={idToConnectTo} onEnterPressed={connectTo} />
-        <Button title="Connect" classes="shrink-0 !w-[105px] md:!w-[115px] h-10 ml-2" disabled={connectButtonDisabled} onClick={connectTo} />
-      </div>
+    <div class="flex items-center h-10 my-1">
+      <div class="shrink-0 w-[74px] md:w-[92px] mr-2">Connect to</div>
+      <TextInput inputClasses="grow min-w-0 h-full" bind:value={idToConnectTo} placeholder={ isConnected ? "Peer ID" : "Connect first" } onEnterPressed={connectTo} />
+      <Button title="Connect" classes="shrink-0 w-[105px] md:w-[115px] h-10 ml-2" disabled={connectButtonDisabled} onClick={connectTo} />
     </div>
   </div>
 
