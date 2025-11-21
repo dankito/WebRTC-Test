@@ -7,8 +7,10 @@
   import Card from "../common/forms/Card.svelte"
   import SectionHeader from "../common/forms/SectionHeader.svelte"
   import type { WebRtcListener } from "../../ts/clients/webrtc/WebRtcListener"
-  import type { ConnectedPeer } from "../../ts/model/ConnectedPeer"
+  import { ConnectedPeer } from "../../ts/model/ConnectedPeer"
   import { WebRtcErrorDomain } from "../../ts/clients/webrtc/WebRtcErrorDomain"
+  import { ReceivedMessage } from "../../ts/model/ReceivedMessage"
+  import { ReceivedMessageType } from "../../ts/model/ReceivedMessageType"
 
   let isConnected: boolean = $state(false)
 
@@ -21,7 +23,7 @@
   let connectedPeers: ConnectedPeer[] = $state([])
   let noPeersConnected: boolean = $derived(connectedPeers.length == 0)
 
-  let receivedMessages: string[] = $state([])
+  let receivedMessages: ReceivedMessage[] = $state([])
 
   let messageToSend: string = $state("")
 
@@ -30,49 +32,49 @@
   const listener: WebRtcListener = {
     connectionOpened(ownId: string): void {
       isConnected = true
-      receivedMessage(`Connection successfully opened, others can now connect to you by id '${ownId}'`)
+      receivedMessage(ReceivedMessageType.Info, `Connection successfully opened, others can now connect to you by id '${ownId}'`)
     },
 
     peerConnected(peer: ConnectedPeer): void {
       connectedPeers.push(peer)
-      receivedMessage(`Peer connected: ${peer}`)
+      receivedMessage(ReceivedMessageType.Info, `Peer connected: ${peer}`, peer)
     },
 
     messageReceived(message: string, peer: ConnectedPeer): void {
-      receivedMessage(`Received message from '${peer}': ${message}`)
+      receivedMessage(ReceivedMessageType.MessageFromPeer, message, peer)
     },
 
     peerDisconnected(peer: ConnectedPeer): void {
       connectedPeers = connectedPeers.filter(it => it != peer)
-      receivedMessage(`Peer disconnected: ${peer}`)
+      receivedMessage(ReceivedMessageType.Info, `Peer disconnected: ${peer}`, peer)
     },
 
     errorOccurred(domain: WebRtcErrorDomain, errorType: string, error: Error, peer?: ConnectedPeer): void {
       if (domain == WebRtcErrorDomain.Connecting) {
         if (errorType == "IdIsAlreadyTaken") {
-          receivedMessage("This ID is already taken, please choose another.")
+          receivedMessage(ReceivedMessageType.Error, "This ID is already taken, please choose another.", peer)
         } else if (errorType == "IdContainsInvalidCharacters") {
-          receivedMessage("This ID contains invalid characters (like Umlaute etc.), please choose another.")
+          receivedMessage(ReceivedMessageType.Error, "This ID contains invalid characters (like Umlaute etc.), please choose another.", peer)
         } else {
-          receivedMessage(`Connecting failed with error type '${errorType}': ${error}`)
+          receivedMessage(ReceivedMessageType.Error, `Connecting failed with error type '${errorType}': ${error}`, peer)
         }
       } else if (domain == WebRtcErrorDomain.Connection) {
-        receivedMessage(`Connection error of type '${errorType}' occurred: ${error}`)
+        receivedMessage(ReceivedMessageType.Error, `Connection error of type '${errorType}' occurred: ${error}`, peer)
       } else if (domain == WebRtcErrorDomain.ConnectingToPeer) {
         if (errorType == "PeerWithIdNotAvailable") {
-          receivedMessage(`Peer with ID '${peer}' is not available.`)
+          receivedMessage(ReceivedMessageType.Error, `Peer with ID '${peer}' is not available.`, peer)
         } else {
-          receivedMessage(`Could not connect to peer '${peer}: ${error}`)
+          receivedMessage(ReceivedMessageType.Error, `Could not connect to peer '${peer}: ${error}`, peer)
         }
       } else if (domain == WebRtcErrorDomain.ErrorOnConnectionToPeer) {
-        receivedMessage(`Error of type '${errorType}' occurred on connection to peer '${peer}': ${error}`)
+        receivedMessage(ReceivedMessageType.Error, `Error of type '${errorType}' occurred on connection to peer '${peer}': ${error}`, peer)
       }
     },
 
     disconnected(): void {
       isConnected = false
       connectedPeers = []
-      receivedMessage("Disconnected. Sending and receiving messages is not possible anymore.")
+      receivedMessage(ReceivedMessageType.Info, "Disconnected. Sending and receiving messages is not possible anymore.")
     },
   }
 
@@ -101,12 +103,14 @@
     if (messageToSend.trim().length > 0) {
       webRtc.sendMessageToAllPeers(messageToSend)
 
+      receivedMessage(ReceivedMessageType.SentMessage, messageToSend)
+
       messageToSend = ""
     }
   }
 
-  function receivedMessage(message: string) {
-    receivedMessages.push(message)
+  function receivedMessage(type: ReceivedMessageType, message: string, peer?: ConnectedPeer) {
+    receivedMessages.push(new ReceivedMessage(new Date(), type, message, peer))
   }
 </script>
 
@@ -138,9 +142,30 @@
 
       <div class="w-full min-h-4 max-h-[70dvh] flex flex-col gap-2 mt-0.5 overflow-y-auto">
         {#each receivedMessages as message, index (index)}
-          <div class="max-w-[90%] bg-[#f1f1f1] rounded-lg px-4 py-2">
-            { message }
-          </div>
+          {#if message.type === ReceivedMessageType.SentMessage}
+            <div class="w-full flex justify-end">
+              <div class="flex max-w-[90%] bg-blue-600 text-white rounded-2xl px-3 py-1.5">
+                { message.message }
+              </div>
+            </div>
+          {:else if message.type === ReceivedMessageType.MessageFromPeer}
+            <div class="flex flex-col max-w-[90%] bg-amber-300 rounded-2xl px-3 py-1.5">
+              <div class="text-amber-600 font-medium mb-0.5">{ message.peer }</div>
+              <div class="">{ message.message }</div>
+            </div>
+          {:else if message.type === ReceivedMessageType.Error}
+            <div class="w-full flex justify-center">
+              <div class="max-w-[80%] bg-red-400/50 text-red-800 text-center rounded-2xl px-3 py-1.5">
+                { message.message }
+              </div>
+            </div>
+          {:else}
+            <div class="w-full flex justify-center">
+              <div class="w-[80%] bg-[#f1f1f1] text-center rounded-2xl px-3 py-1.5">
+                { message.message }
+              </div>
+            </div>
+          {/if}
         {/each}
       </div>
 
