@@ -115,8 +115,8 @@
 </script>
 
 
-<div class="w-full h-full flex flex-col items-center justify-center p-2">
-  <div class="w-full max-w-[500px] mx-auto h-fit bg-white rounded-xl p-2">
+<div class="w-full h-dvh flex flex-col items-center justify-center p-2">
+  <div class="shrink-0 w-full max-w-[500px] mx-auto h-fit bg-white rounded-xl p-2">
     {#if isConnected === false}
       <div class="flex items-center h-10 my-1">
         <div class="shrink-0 w-[74px] md:w-[92px] mr-2">Set your ID</div>
@@ -136,11 +136,11 @@
     </div>
   </div>
 
-  <Card classes="w-full max-w-[500px] mt-4 px-3">
-    <div class="flex flex-col">
+  <Card classes="grow flex flex-col w-full max-w-[500px] min-h-0 mt-4 px-3">
+    <div class="flex-1 flex flex-col min-h-0">
       <SectionHeader title="Messages" addTopMargin={false} classes="mt-1" />
 
-      <div class="w-full min-h-4 max-h-[70dvh] flex flex-col gap-2 mt-0.5 overflow-y-auto">
+      <div class="flex-1 w-full min-h-4 flex flex-col gap-2 mt-0.5 overflow-y-auto">
         {#each receivedMessages as message, index (index)}
           {#if message.type === ReceivedMessageType.SentMessage}
             <div class="w-full flex justify-end">
