@@ -2,6 +2,7 @@ import type { WebRtcClient } from "../clients/webrtc/WebRtcClient"
 import { PeerJsWebRtcClient } from "../clients/webrtc/PeerJsWebRtcClient"
 import type { LogService } from "./LogService"
 import type { WebRtcListener } from "../clients/webrtc/WebRtcListener"
+import type { ConnectedPeer } from "../model/ConnectedPeer"
 
 export class WebRtcService {
 
@@ -18,6 +19,14 @@ export class WebRtcService {
 
   connectTo(id: string) {
     this.client.connectTo(id)
+  }
+
+  sendMessageToAllPeers(message: string) {
+    this.client.sendMessageToAllPeers(message)
+  }
+
+  sendMessageToPeer(peer: ConnectedPeer, message: string) {
+    this.client.sendMessageToPeer(peer, message)
   }
 
   close() {

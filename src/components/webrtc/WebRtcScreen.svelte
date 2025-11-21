@@ -18,53 +18,61 @@
   let idToConnectTo: string = $state("")
   let connectButtonDisabled: boolean = $derived(isConnected == false || idToConnectTo.trim().length == 0)
 
+  let connectedPeers: ConnectedPeer[] = $state([])
+  let noPeersConnected: boolean = $derived(connectedPeers.length == 0)
+
   let receivedMessages: string[] = $state([])
+
+  let messageToSend: string = $state("")
 
   const log = DI.log
 
   const listener: WebRtcListener = {
     connectionOpened(ownId: string): void {
       isConnected = true
-      addMessage(`Connection successfully opened, others can now connect to you by id '${ownId}'`)
+      receivedMessage(`Connection successfully opened, others can now connect to you by id '${ownId}'`)
     },
 
     peerConnected(peer: ConnectedPeer): void {
-      addMessage(`Peer connected: ${peer}`)
+      connectedPeers.push(peer)
+      receivedMessage(`Peer connected: ${peer}`)
     },
 
     messageReceived(message: string, peer: ConnectedPeer): void {
-      addMessage(`Received message from '${peer}': ${message}`)
+      receivedMessage(`Received message from '${peer}': ${message}`)
     },
 
     peerDisconnected(peer: ConnectedPeer): void {
-      addMessage(`Peer disconnected: ${peer}`)
+      connectedPeers = connectedPeers.filter(it => it != peer)
+      receivedMessage(`Peer disconnected: ${peer}`)
     },
 
     errorOccurred(domain: WebRtcErrorDomain, errorType: string, error: Error, peer?: ConnectedPeer): void {
       if (domain == WebRtcErrorDomain.Connecting) {
         if (errorType == "IdIsAlreadyTaken") {
-          addMessage("This ID is already taken, please choose another.")
+          receivedMessage("This ID is already taken, please choose another.")
         } else if (errorType == "IdContainsInvalidCharacters") {
-          addMessage("This ID contains invalid characters (like Umlaute etc.), please choose another.")
+          receivedMessage("This ID contains invalid characters (like Umlaute etc.), please choose another.")
         } else {
-          addMessage(`Connecting failed with error type '${errorType}': ${error}`)
+          receivedMessage(`Connecting failed with error type '${errorType}': ${error}`)
         }
       } else if (domain == WebRtcErrorDomain.Connection) {
-        addMessage(`Connection error of type '${errorType}' occurred: ${error}`)
+        receivedMessage(`Connection error of type '${errorType}' occurred: ${error}`)
       } else if (domain == WebRtcErrorDomain.ConnectingToPeer) {
         if (errorType == "PeerWithIdNotAvailable") {
-          addMessage(`Peer with ID '${peer}' is not available.`)
+          receivedMessage(`Peer with ID '${peer}' is not available.`)
         } else {
-          addMessage(`Could not connect to peer '${peer}: ${error}`)
+          receivedMessage(`Could not connect to peer '${peer}: ${error}`)
         }
       } else if (domain == WebRtcErrorDomain.ErrorOnConnectionToPeer) {
-        addMessage(`Error of type '${errorType}' occurred on connection to peer '${peer}': ${error}`)
+        receivedMessage(`Error of type '${errorType}' occurred on connection to peer '${peer}': ${error}`)
       }
     },
 
     disconnected(): void {
       isConnected = false
-      addMessage("Disconnected. Sending and receiving messages is not possible anymore.")
+      connectedPeers = []
+      receivedMessage("Disconnected. Sending and receiving messages is not possible anymore.")
     },
   }
 
@@ -89,7 +97,15 @@
     webRtc.connectTo(idToConnectTo)
   }
 
-  function addMessage(message: string) {
+  function sendMessage() {
+    if (messageToSend.trim().length > 0) {
+      webRtc.sendMessageToAllPeers(messageToSend)
+
+      messageToSend = ""
+    }
+  }
+
+  function receivedMessage(message: string) {
     receivedMessages.push(message)
   }
 </script>
@@ -120,12 +136,18 @@
     <div class="flex flex-col">
       <SectionHeader title="Messages" addTopMargin={false} classes="mt-1" />
 
-      <div class="w-full min-h-4 max-h-[70dvh] flex flex-col gap-2 mt-0.5 mb-3.5 overflow-y-auto">
+      <div class="w-full min-h-4 max-h-[70dvh] flex flex-col gap-2 mt-0.5 overflow-y-auto">
         {#each receivedMessages as message, index (index)}
           <div class="max-w-[90%] bg-[#f1f1f1] rounded-lg px-4 py-2">
             { message }
           </div>
         {/each}
+      </div>
+
+      <div class="w-full mt-2 mb-3.5 flex items-center">
+        <TextInput inputClasses="grow min-w-0 h-full" bind:value={messageToSend} disabled={noPeersConnected} onEnterPressed={sendMessage}
+                   placeholder={ noPeersConnected ? "Connect to a peer first" : "Send message to all connected peers" } />
+        <Button title="Send" classes="shrink-0 w-[105px] md:w-[115px] h-10 ml-2" disabled={noPeersConnected || messageToSend.trim().length === 0} onClick={sendMessage} />
       </div>
     </div>
   </Card>

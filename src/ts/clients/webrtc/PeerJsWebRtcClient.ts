@@ -40,6 +40,16 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     }
   }
 
+  sendMessageToAllPeers(message: string) {
+    this.connectedPeers.forEach(state => this.sendMessageToPeer(state.peer, message))
+  }
+
+  sendMessageToPeer(peer: ConnectedPeer, message: string) {
+    this.getConnectionForPeerOrLogError(peer, connection => {
+      connection.send(message)
+    })
+  }
+
   close() {
     this.peer.destroy()
   }
@@ -115,12 +125,22 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     })
   }
 
+
   private getPeerForConnection(connection: DataConnection): ConnectedPeer {
     return this.getPeerForId(connection.peer)
   }
 
   private getPeerForId(peerId: string): ConnectedPeer {
     return this.connectedPeers.get(peerId)!!.peer
+  }
+
+  private getConnectionForPeerOrLogError(peer: ConnectedPeer, found: (connection: DataConnection) => void) {
+    const state = this.connectedPeers.get(peer.id)
+    if (state == null) {
+      this.log.error(`No connected peer with id '${peer.id}' found. Connected peers: ${this.connectedPeers.keys()}`)
+    } else {
+      found(state.connection)
+    }
   }
 
 }
