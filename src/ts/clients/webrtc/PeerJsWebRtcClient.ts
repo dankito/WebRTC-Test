@@ -5,12 +5,15 @@ import { LogService } from "../../service/LogService"
 import type { WebRtcListener } from "./WebRtcListener"
 import { ConnectedPeer } from "../../model/ConnectedPeer"
 import { WebRtcErrorDomain } from "./WebRtcErrorDomain"
+import { ConnectedPeerState } from "./ConnectedPeerState"
 
 export class PeerJsWebRtcClient implements WebRtcClient {
 
   private peer: Peer = new Peer()
 
   private ownId: string | undefined
+
+  private connectedPeers = new Map<string, ConnectedPeerState>()
 
   constructor(private readonly listener: WebRtcListener, private readonly log: LogService) {
     this.setUpPeer()
@@ -33,7 +36,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
       this.connectionCreated(connection)
     } catch (e) {
       this.log.error(`Could not connect to peer '${id}'`, e)
-      this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "Connecting failed", e, new ConnectedPeer(id))
+      this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "Connecting failed", e as Error, new ConnectedPeer(id))
     }
   }
 
@@ -83,13 +86,14 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   private connectionCreated(connection: DataConnection) {
     connection.on("open", () => {
       const peer = new ConnectedPeer(connection.peer)
+      this.connectedPeers.set(connection.peer, new ConnectedPeerState(peer, connection))
       this.listener.peerConnected(peer)
 
       connection.send(`Gegrüßet seist du ${connection.peer}, ich sehe dich! Dein ${this.ownId}`)
     })
 
     connection.on("data", (data: any) => { // for now data will in our case always be a string
-      this.listener.messageReceived(data, new ConnectedPeer(connection.peer)) // TODO: reuse ConnectedPeer object
+      this.listener.messageReceived(data, this.getPeerForConnection(connection))
     })
 
     connection.on("iceStateChanged", (state: RTCIceConnectionState) => {
@@ -99,11 +103,24 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     connection.on("error", (error: PeerError<"not-open-yet" | "message-too-big" | "negotiation-failed" | "connection-closed">) => {
       this.log.error("Error occurred on connection", connection.peer, error, connection)
 
-      this.listener.errorOccurred(WebRtcErrorDomain.ErrorOnConnectionToPeer, error.type, error, new ConnectedPeer(connection.peer)) // TODO: reuse ConnectedPeer object
+      this.listener.errorOccurred(WebRtcErrorDomain.ErrorOnConnectionToPeer, error.type, error, this.getPeerForConnection(connection))
+
+      // TODO: remove peer from connectedPeers then?
     })
 
     connection.on("close", () => {
-      this.listener.peerDisconnected(new ConnectedPeer(connection.peer)) // TODO: reuse ConnectedPeer object
+      this.listener.peerDisconnected(this.getPeerForConnection(connection))
+
+      this.connectedPeers.delete(connection.peer)
     })
   }
+
+  private getPeerForConnection(connection: DataConnection): ConnectedPeer {
+    return this.getPeerForId(connection.peer)
+  }
+
+  private getPeerForId(peerId: string): ConnectedPeer {
+    return this.connectedPeers.get(peerId)!!.peer
+  }
+
 }
