@@ -81,6 +81,10 @@
     webRtc.openForConnections(ownId)
   }
 
+  function disconnect() {
+    webRtc.close()
+  }
+
   function connectTo() {
     webRtc.connectTo(idToConnectTo)
   }
@@ -93,11 +97,17 @@
 
 <div class="w-full h-full flex flex-col items-center justify-center p-2">
   <div class="w-full max-w-[500px] mx-auto h-fit bg-white rounded-xl p-2">
-    <div class="flex items-center h-10 my-1">
-      <div class="shrink-0 w-[74px] md:w-[92px] mr-2">Set your ID</div>
-      <TextInput inputClasses="grow min-w-0 h-full" placeholder="ID by which others can connect to you" bind:value={ownId} onEnterPressed={openForConnections} />
-      <Button title="Open" classes="shrink-0 !w-[105px] md:!w-[115px] h-10 ml-2" disabled={openButtonDisabled} onClick={openForConnections} />
-    </div>
+    {#if isConnected === false}
+      <div class="flex items-center h-10 my-1">
+        <div class="shrink-0 w-[74px] md:w-[92px] mr-2">Set your ID</div>
+        <TextInput inputClasses="grow min-w-0 h-full" placeholder="ID by which others can connect to you" bind:value={ownId} onEnterPressed={openForConnections} />
+        <Button title="Open" classes="shrink-0 !w-[105px] md:!w-[115px] h-10 ml-2" disabled={openButtonDisabled} onClick={openForConnections} />
+      </div>
+    {:else}
+      <div class="flex items-center justify-end h-10 my-1">
+        <Button title="Close" classes="w-[105px] md:w-[115px] h-10" onClick={disconnect} />
+      </div>
+    {/if}
 
     <div class="flex items-center h-10 my-1">
       <div class="shrink-0 w-[74px] md:w-[92px] mr-2">Connect to</div>
