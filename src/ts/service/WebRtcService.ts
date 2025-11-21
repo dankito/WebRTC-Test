@@ -1,13 +1,14 @@
 import type { WebRtcClient } from "../clients/webrtc/WebRtcClient"
 import { PeerJsWebRtcClient } from "../clients/webrtc/PeerJsWebRtcClient"
 import type { LogService } from "./LogService"
+import type { WebRtcListener } from "../clients/webrtc/WebRtcListener"
 
 export class WebRtcService {
 
   private readonly client: WebRtcClient
 
-  constructor(private readonly log: LogService) {
-    this.client = new PeerJsWebRtcClient(log)
+  constructor(listener: WebRtcListener, private readonly log: LogService) {
+    this.client = new PeerJsWebRtcClient(listener, log)
   }
 
 
