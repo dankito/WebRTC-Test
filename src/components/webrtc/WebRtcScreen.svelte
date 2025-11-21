@@ -111,6 +111,15 @@
 
   function receivedMessage(type: ReceivedMessageType, message: string, peer?: ConnectedPeer) {
     receivedMessages.push(new ReceivedMessage(new Date(), type, message, peer))
+
+    scrollToEnd()
+  }
+
+  function scrollToEnd() {
+    setTimeout(() => {
+      const list = document.querySelector(".overflow-y-auto")
+      list?.scrollTo(0, list?.scrollHeight)
+    }, 100) // give DOM same time to add new message and render before scrolling to the new message
   }
 </script>
 
