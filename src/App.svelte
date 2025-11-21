@@ -1,8 +1,7 @@
 <script lang="ts">
+  import MainScreen from "./components/MainScreen.svelte"
 </script>
 
 <main>
-  <p>
-    Click on the Vite and Svelte logos to learn more
-  </p>
+  <MainScreen />
 </main>

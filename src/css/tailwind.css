@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #1D354D; /* or #1E364E ? */
+  --color-secondary: #FBBB21;
+  --color-secondary-higher-contrast: #F29D00;
+  --color-highlight: var(--color-secondary);
+  --color-highlight-higher-contrast: var(--color-secondary-higher-contrast);
+}
