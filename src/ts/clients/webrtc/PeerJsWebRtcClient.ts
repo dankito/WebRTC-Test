@@ -71,7 +71,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
 
   private setUpPeer() {
     this.peer.on("open", id => {
-      if (this.stripIdPrefix(id) === this.ownId) {
+      if (this.isOwnId(id)) {
         this.listener.connectionOpened(id)
       }
     })
@@ -100,11 +100,10 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     })
 
     this.peer.on("disconnected", (id: string) => {
-      const peerId = this.stripIdPrefix(id)
-      if (peerId == this.ownId) {
+      if (this.isOwnId(id)) {
         this.listener.disconnected()
       } else {
-        this.log.warn("Disconnected from unknown Peer ID", peerId, id)
+        this.log.warn("Disconnected from unknown Peer ID", this.stripIdPrefix(id), id)
       }
     })
   }
@@ -155,6 +154,10 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     } else {
       return id
     }
+  }
+
+  private isOwnId(peerId: string): boolean {
+    return this.stripIdPrefix(peerId) === this.ownId
   }
 
   private getPeerId(connection: DataConnection): string {
