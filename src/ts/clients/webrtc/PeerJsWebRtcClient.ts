@@ -1,5 +1,5 @@
 import type { WebRtcClient } from "./WebRtcClient"
-import type { DataConnection, MediaConnection } from "peerjs"
+import { type DataConnection, type MediaConnection, type PeerOptions } from "peerjs"
 import Peer, { PeerError, PeerErrorType } from "peerjs"
 import { LogService } from "../../service/LogService"
 import type { WebRtcListener } from "./WebRtcListener"
@@ -9,7 +9,16 @@ import { ConnectedPeerState } from "./ConnectedPeerState"
 
 export class PeerJsWebRtcClient implements WebRtcClient {
 
-  private peer: Peer = new Peer()
+  private static config: PeerOptions = {
+    config: {
+      iceServers: [
+        { urls: "stun:stun.nextcloud.com:3478" },
+        { urls: "stun:stun.threema.ch:3478" },
+      ]
+    }
+  }
+
+  private peer: Peer = new Peer(PeerJsWebRtcClient.config)
 
   private ownId: string | undefined
 
@@ -24,7 +33,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     this.close()
 
     this.ownId = ownId
-    this.peer = new Peer(ownId)
+    this.peer = new Peer(ownId, PeerJsWebRtcClient.config)
 
     this.setUpPeer()
   }
