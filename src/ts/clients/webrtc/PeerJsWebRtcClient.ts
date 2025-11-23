@@ -99,7 +99,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
       this.connectedPeers.set(connection.peer, new ConnectedPeerState(peer, connection))
       this.listener.peerConnected(peer)
 
-      connection.send(`Gegrüßet seist du ${connection.peer}, ich sehe dich! Dein ${this.ownId}`)
+      connection.send(`Gegrüßet seist du ${connection.peer}, ich sehe dich! Dein(e) ${this.ownId}`)
     })
 
     connection.on("data", (data: any) => { // for now data will in our case always be a string
