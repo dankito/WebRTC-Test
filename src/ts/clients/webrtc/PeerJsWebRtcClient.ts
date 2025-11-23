@@ -161,7 +161,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   }
 
   private getPeerId(connection: DataConnection): string {
-    if (connection.metadata instanceof ConnectionMetadata && connection.metadata?.peerId) {
+    if (connection.metadata?.peerId) { // connection.metadata instanceof ConnectionMetadata fails for deserialized JSON objects
       return connection.metadata.peerId
     }
 
