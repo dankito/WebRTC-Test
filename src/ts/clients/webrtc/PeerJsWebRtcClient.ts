@@ -34,13 +34,13 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     this.close()
 
     this.ownId = ownId
-    this.peer = new Peer(this.addIdPrefix(ownId), PeerJsWebRtcClient.config)
+    this.peer = new Peer(this.createPrefixedId(ownId), PeerJsWebRtcClient.config)
 
     this.setUpPeer()
   }
 
   connectTo(id: string) {
-    const idToConnectTo = this.addIdPrefix(id)
+    const idToConnectTo = this.createPrefixedId(id)
 
     try {
       const connection = this.peer.connect(idToConnectTo, {
@@ -144,8 +144,8 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   }
 
 
-  private addIdPrefix(id: string): string {
-    return this.idPrefix + id
+  private createPrefixedId(id: string): string {
+    return this.idPrefix + id.toLowerCase()
   }
 
   private stripIdPrefix(id: string): string {
@@ -157,7 +157,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   }
 
   private isOwnId(peerId: string): boolean {
-    return this.stripIdPrefix(peerId) === this.ownId
+    return this.stripIdPrefix(peerId).toLowerCase() === this.ownId?.toLowerCase()
   }
 
   private getPeerId(connection: DataConnection): string {
