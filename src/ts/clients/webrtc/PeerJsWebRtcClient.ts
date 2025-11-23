@@ -24,7 +24,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
 
   private connectedPeers = new Map<string, ConnectedPeerState>()
 
-  constructor(private readonly listener: WebRtcListener, private readonly log: LogService) {
+  constructor(private readonly listener: WebRtcListener, private readonly log: LogService, private readonly idPrefix = "mamelodi-webrtc-test-") {
     this.setUpPeer()
   }
 
@@ -33,18 +33,20 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     this.close()
 
     this.ownId = ownId
-    this.peer = new Peer(ownId, PeerJsWebRtcClient.config)
+    this.peer = new Peer(this.addIdPrefix(ownId), PeerJsWebRtcClient.config)
 
     this.setUpPeer()
   }
 
   connectTo(id: string) {
+    const idToConnectTo = this.addIdPrefix(id)
+
     try {
-      const connection = this.peer.connect(id)
+      const connection = this.peer.connect(idToConnectTo)
 
       this.connectionCreated(connection)
     } catch (e) {
-      this.log.error(`Could not connect to peer '${id}'`, e)
+      this.log.error(`Could not connect to peer '${id}' (${idToConnectTo})`, e)
       this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "Connecting failed", e as Error, new ConnectedPeer(id))
     }
   }
@@ -66,7 +68,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
 
   private setUpPeer() {
     this.peer.on("open", id => {
-      if (id === this.ownId) {
+      if (this.stripIdPrefix(id) === this.ownId) {
         this.listener.connectionOpened(id)
       }
     })
@@ -83,7 +85,8 @@ export class PeerJsWebRtcClient implements WebRtcClient {
       this.log.error("Error occurred on peer", error.type, error.name, error.message, error)
 
       if (error.type == PeerErrorType.PeerUnavailable) {
-        this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "PeerWithIdNotAvailable", error, new ConnectedPeer(error.message.replace("Could not connect to peer ", "")))
+        const peerId = error.message.replace("Could not connect to peer ", "")
+        this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "PeerWithIdNotAvailable", error, new ConnectedPeer(this.stripIdPrefix(peerId)))
       } else if (error.type == PeerErrorType.UnavailableID) {
         this.listener.errorOccurred(WebRtcErrorDomain.Connecting, "IdIsAlreadyTaken", error)
       } else if (error.type == PeerErrorType.InvalidID) {
@@ -93,22 +96,25 @@ export class PeerJsWebRtcClient implements WebRtcClient {
       }
     })
 
-    this.peer.on("disconnected", (peerId: string) => {
+    this.peer.on("disconnected", (id: string) => {
+      const peerId = this.stripIdPrefix(id)
       if (peerId == this.ownId) {
         this.listener.disconnected()
       } else {
-        this.log.warn("Disconnected from unknown Peer ID", peerId)
+        this.log.warn("Disconnected from unknown Peer ID", peerId, id)
       }
     })
   }
 
   private connectionCreated(connection: DataConnection) {
+    const peerId = this.stripIdPrefix(connection.peer)
+
     connection.on("open", () => {
-      const peer = new ConnectedPeer(connection.peer)
-      this.connectedPeers.set(connection.peer, new ConnectedPeerState(peer, connection))
+      const peer = new ConnectedPeer(peerId)
+      this.connectedPeers.set(peerId, new ConnectedPeerState(peer, connection))
       this.listener.peerConnected(peer)
 
-      connection.send(`Gegrüßet seist du ${connection.peer}, ich sehe dich! Dein(e) ${this.ownId}`)
+      connection.send(`Gegrüßet seist du ${peerId}, ich sehe dich! Dein(e) ${this.ownId}`)
     })
 
     connection.on("data", (data: any) => { // for now data will in our case always be a string
@@ -130,13 +136,26 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     connection.on("close", () => {
       this.listener.peerDisconnected(this.getPeerForConnection(connection))
 
-      this.connectedPeers.delete(connection.peer)
+      this.connectedPeers.delete(peerId)
     })
   }
 
 
+  private addIdPrefix(id: string): string {
+    return this.idPrefix + id
+  }
+
+  private stripIdPrefix(id: string): string {
+    if (id.startsWith(this.idPrefix)) {
+      return id.substring(this.idPrefix.length)
+    } else {
+      return id
+    }
+  }
+
+
   private getPeerForConnection(connection: DataConnection): ConnectedPeer {
-    return this.getPeerForId(connection.peer)
+    return this.getPeerForId(this.stripIdPrefix(connection.peer))
   }
 
   private getPeerForId(peerId: string): ConnectedPeer {
