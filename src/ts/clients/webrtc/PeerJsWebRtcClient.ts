@@ -6,6 +6,7 @@ import type { WebRtcListener } from "./WebRtcListener"
 import { ConnectedPeer } from "../../model/ConnectedPeer"
 import { WebRtcErrorDomain } from "./WebRtcErrorDomain"
 import { ConnectedPeerState } from "./ConnectedPeerState"
+import { ConnectionMetadata } from "./ConnectionMetadata"
 
 export class PeerJsWebRtcClient implements WebRtcClient {
 
@@ -42,7 +43,9 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     const idToConnectTo = this.addIdPrefix(id)
 
     try {
-      const connection = this.peer.connect(idToConnectTo)
+      const connection = this.peer.connect(idToConnectTo, {
+        metadata: new ConnectionMetadata(id)
+      })
 
       this.connectionCreated(connection)
     } catch (e) {
@@ -107,7 +110,8 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   }
 
   private connectionCreated(connection: DataConnection) {
-    const peerId = this.stripIdPrefix(connection.peer)
+    const prefixedId = connection.peer
+    const peerId = this.getPeerId(connection)
 
     connection.on("open", () => {
       const peer = new ConnectedPeer(peerId)
@@ -126,7 +130,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     })
 
     connection.on("error", (error: PeerError<"not-open-yet" | "message-too-big" | "negotiation-failed" | "connection-closed">) => {
-      this.log.error("Error occurred on connection", connection.peer, error, connection)
+      this.log.error("Error occurred on connection", prefixedId, peerId, error, connection)
 
       this.listener.errorOccurred(WebRtcErrorDomain.ErrorOnConnectionToPeer, error.type, error, this.getPeerForConnection(connection))
 
@@ -153,9 +157,17 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     }
   }
 
+  private getPeerId(connection: DataConnection): string {
+    if (connection.metadata instanceof ConnectionMetadata && connection.metadata?.peerId) {
+      return connection.metadata.peerId
+    }
+
+    return this.stripIdPrefix(connection.peer)
+  }
+
 
   private getPeerForConnection(connection: DataConnection): ConnectedPeer {
-    return this.getPeerForId(this.stripIdPrefix(connection.peer))
+    return this.getPeerForId(this.getPeerId(connection))
   }
 
   private getPeerForId(peerId: string): ConnectedPeer {
