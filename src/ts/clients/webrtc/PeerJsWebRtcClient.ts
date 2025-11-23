@@ -72,7 +72,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   private setUpPeer() {
     this.peer.on("open", id => {
       if (this.isOwnId(id)) {
-        this.listener.connectionOpened(id)
+        this.listener.connectionOpened(this.ownId ?? this.stripIdPrefix(this.peer.id))
       }
     })
 
