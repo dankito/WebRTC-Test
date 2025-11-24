@@ -43,6 +43,8 @@
       receivedMessage(ReceivedMessageType.Info, `Peer connected: ${peer}`, peer)
 
       if (connectToInputRef?.value?.toLowerCase() === peer.displayName.toLowerCase()) {
+        connectToInputRef.value = ""
+
         setTimeout(() => sendMessageInputRef?.focus(), 10)
       }
     },
