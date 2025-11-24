@@ -44,10 +44,10 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     try {
       const connection = this.peer.connect(idToConnectTo)
 
-      this.connectionCreated(connection)
+      this.connectionCreated(connection, id)
     } catch (e) {
       this.log.error(`Could not connect to peer '${id}' (${idToConnectTo})`, e)
-      this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "Connecting failed", e as Error, new ConnectedPeer(id))
+      this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "Connecting failed", e as Error, new ConnectedPeer(idToConnectTo, id))
     }
   }
 
@@ -86,7 +86,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
 
       if (error.type == PeerErrorType.PeerUnavailable) {
         const peerId = error.message.replace("Could not connect to peer ", "")
-        this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "PeerWithIdNotAvailable", error, new ConnectedPeer(this.stripIdPrefix(peerId)))
+        this.listener.errorOccurred(WebRtcErrorDomain.ConnectingToPeer, "PeerWithIdNotAvailable", error, new ConnectedPeer(peerId, this.stripIdPrefix(peerId)))
       } else if (error.type == PeerErrorType.UnavailableID) {
         this.listener.errorOccurred(WebRtcErrorDomain.Connecting, "IdIsAlreadyTaken", error)
       } else if (error.type == PeerErrorType.InvalidID) {
@@ -105,16 +105,16 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     })
   }
 
-  private connectionCreated(connection: DataConnection) {
-    const prefixedId = connection.peer
-    const peerId = this.getPeerId(connection)
+  private connectionCreated(connection: DataConnection, enteredPeerId?: string) {
+    const peerId = connection.peer
+    const displayName = enteredPeerId ?? this.stripIdPrefix(peerId)
 
     connection.on("open", () => {
-      const peer = new ConnectedPeer(peerId)
+      const peer = new ConnectedPeer(peerId, displayName)
       this.connectedPeers.set(peerId, new ConnectedPeerState(peer, connection))
       this.listener.peerConnected(peer)
 
-      connection.send(`Gegrüßet seist du ${peerId}, ich sehe dich! Dein(e) ${this.ownId}`)
+      connection.send(`Gegrüßet seist du ${displayName}, ich sehe dich! Dein(e) ${this.ownId}`)
     })
 
     connection.on("data", (data: any) => { // for now data will in our case always be a string
@@ -126,7 +126,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     })
 
     connection.on("error", (error: PeerError<"not-open-yet" | "message-too-big" | "negotiation-failed" | "connection-closed">) => {
-      this.log.error("Error occurred on connection", prefixedId, peerId, error, connection)
+      this.log.error("Error occurred on connection", peerId, peerId, error, connection)
 
       this.listener.errorOccurred(WebRtcErrorDomain.ErrorOnConnectionToPeer, error.type, error, this.getPeerForConnection(connection))
 
@@ -158,7 +158,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   }
 
   private getPeerId(connection: DataConnection): string {
-    return this.stripIdPrefix(connection.peer)
+    return connection.peer
   }
 
 

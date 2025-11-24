@@ -1,10 +1,10 @@
 export class ConnectedPeer {
 
-  constructor(readonly id: string) { }
+  constructor(readonly id: string, readonly displayName: string) { }
 
 
   toString(): string {
-    return this.id
+    return this.displayName
   }
 
 }
