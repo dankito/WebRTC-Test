@@ -1,6 +1,6 @@
 export class ConnectedPeer {
 
-  constructor(readonly id: string, readonly displayName: string) { }
+  constructor(readonly id: string, public displayName: string) { }
 
 
   toString(): string {

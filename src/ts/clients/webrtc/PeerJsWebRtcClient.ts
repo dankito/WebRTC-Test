@@ -1,11 +1,14 @@
 import type { WebRtcClient } from "./WebRtcClient"
-import { type DataConnection, type MediaConnection, type PeerOptions } from "peerjs"
-import Peer, { PeerError, PeerErrorType } from "peerjs"
+import Peer, { type DataConnection, type MediaConnection, PeerError, PeerErrorType, type PeerOptions } from "peerjs"
 import { LogService } from "../../service/LogService"
 import type { WebRtcListener } from "./WebRtcListener"
 import { ConnectedPeer } from "../../model/ConnectedPeer"
 import { WebRtcErrorDomain } from "./WebRtcErrorDomain"
 import { ConnectedPeerState } from "./ConnectedPeerState"
+import type { Message } from "./messages/Message"
+import { MessageType } from "./messages/MessageType"
+import { ChatMessage } from "./messages/ChatMessage"
+import { UserInfo } from "./messages/UserInfo"
 
 export class PeerJsWebRtcClient implements WebRtcClient {
 
@@ -57,8 +60,12 @@ export class PeerJsWebRtcClient implements WebRtcClient {
 
   sendMessageToPeer(peer: ConnectedPeer, message: string) {
     this.getConnectionForPeerOrLogError(peer, connection => {
-      connection.send(message)
+      this.sendChatMessage(connection, message)
     })
+  }
+
+  private sendChatMessage(connection: DataConnection, message: string) {
+    connection.send(new ChatMessage(message))
   }
 
   close() {
@@ -112,13 +119,24 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     connection.on("open", () => {
       const peer = new ConnectedPeer(peerId, displayName)
       this.connectedPeers.set(peerId, new ConnectedPeerState(peer, connection))
-      this.listener.peerConnected(peer)
 
-      connection.send(`Gegrüßet seist du ${displayName}, ich sehe dich! Dein(e) ${this.ownId}`)
+      connection.send(new UserInfo(this.ownId!!))
     })
 
     connection.on("data", (data: any) => { // for now data will in our case always be a string
-      this.listener.messageReceived(data, this.getPeerForConnection(connection))
+      const message = data as Message
+
+      if (message.type == MessageType.UserInfo) {
+        const peer = this.getPeerForConnection(connection)
+        const userInfo = message as UserInfo
+        peer.displayName = userInfo.displayName
+
+        this.listener.peerConnected(peer)
+        this.sendChatMessage(connection, `Gegrüßet seist du ${peer.displayName}, ich sehe dich! Dein(e) ${this.ownId}`)
+      } else if (message.type == MessageType.ChatMessage) {
+        // message.sent is a string by the way, it does not get correctly deserialized as Date
+        this.listener.messageReceived((message as ChatMessage).message, this.getPeerForConnection(connection))
+      }
     })
 
     connection.on("iceStateChanged", (state: RTCIceConnectionState) => {
