@@ -6,7 +6,6 @@ import type { WebRtcListener } from "./WebRtcListener"
 import { ConnectedPeer } from "../../model/ConnectedPeer"
 import { WebRtcErrorDomain } from "./WebRtcErrorDomain"
 import { ConnectedPeerState } from "./ConnectedPeerState"
-import { ConnectionMetadata } from "./ConnectionMetadata"
 
 export class PeerJsWebRtcClient implements WebRtcClient {
 
@@ -43,9 +42,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
     const idToConnectTo = this.createPrefixedId(id)
 
     try {
-      const connection = this.peer.connect(idToConnectTo, {
-        metadata: new ConnectionMetadata(id)
-      })
+      const connection = this.peer.connect(idToConnectTo)
 
       this.connectionCreated(connection)
     } catch (e) {
@@ -161,10 +158,6 @@ export class PeerJsWebRtcClient implements WebRtcClient {
   }
 
   private getPeerId(connection: DataConnection): string {
-    if (connection.metadata?.peerId) { // connection.metadata instanceof ConnectionMetadata fails for deserialized JSON objects
-      return connection.metadata.peerId
-    }
-
     return this.stripIdPrefix(connection.peer)
   }
 
