@@ -167,12 +167,12 @@
         {#each receivedMessages as message, index (index)}
           {#if message.type === ReceivedMessageType.SentMessage}
             <div class="w-full flex justify-end">
-              <div class="flex max-w-[90%] bg-blue-600 text-white rounded-2xl px-3 py-1.5">
+              <div class="flex max-w-[90%] bg-blue-600 text-white rounded-2xl px-3 py-1.5 whitespace-pre">
                 { message.message }
               </div>
             </div>
           {:else if message.type === ReceivedMessageType.MessageFromPeer}
-            <div class="flex flex-col max-w-[90%] bg-amber-300 rounded-2xl px-3 py-1.5">
+            <div class="flex flex-col max-w-[90%] bg-amber-300 rounded-2xl px-3 py-1.5 whitespace-pre">
               <div class="text-amber-600 font-medium mb-0.5">{ message.peer }</div>
               <div class="">{ message.message }</div>
             </div>

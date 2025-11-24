@@ -132,7 +132,7 @@ export class PeerJsWebRtcClient implements WebRtcClient {
         peer.displayName = userInfo.displayName
 
         this.listener.peerConnected(peer)
-        this.sendChatMessage(connection, `Gegrüßet seist du ${peer.displayName}, ich sehe dich! Dein(e) ${this.ownId}`)
+        this.sendChatMessage(connection, `Gegrüßet seist du ${peer.displayName}, ich sehe dich!\nDein(e) ${this.ownId}`)
       } else if (message.type == MessageType.ChatMessage) {
         // message.sent is a string by the way, it does not get correctly deserialized as Date
         this.listener.messageReceived((message as ChatMessage).message, this.getPeerForConnection(connection))
