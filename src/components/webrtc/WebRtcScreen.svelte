@@ -27,7 +27,7 @@
   let receivedMessages: ReceivedMessage[] = $state([])
 
   let messageToSend: string = $state("")
-  let sendMessageInputRef: HTMLInputElement | undefined = $state()
+  let sendMessageTextAreaRef: HTMLTextAreaElement | undefined = $state()
 
   const log = DI.log
 
@@ -45,7 +45,7 @@
       if (connectToInputRef?.value?.toLowerCase() === peer.displayName.toLowerCase()) {
         connectToInputRef.value = ""
 
-        setTimeout(() => sendMessageInputRef?.focus(), 10)
+        setTimeout(() => sendMessageTextAreaRef?.focus(), 10)
       }
     },
 
@@ -106,6 +106,13 @@
 
   function connectTo() {
     webRtc.connectTo(idToConnectTo)
+  }
+
+  function sentMessageKeyDown(event: KeyboardEvent) {
+    if (event.key === "Enter" && event.shiftKey == false && event.metaKey == false) {
+      event.preventDefault()
+      sendMessage()
+    }
   }
 
   function sendMessage() {
@@ -193,8 +200,9 @@
       </div>
 
       <div class="w-full mt-2 mb-3.5 flex items-center">
-        <TextInput inputClasses="grow min-w-0 h-full" bind:value={messageToSend} bind:inputRef={sendMessageInputRef} disabled={noPeersConnected}
-                   onEnterPressed={sendMessage} placeholder={ noPeersConnected ? "Connect to a peer first" : "Send message to all connected peers" } />
+        <textarea bind:value={messageToSend} bind:this={sendMessageTextAreaRef} onkeydown={sentMessageKeyDown}
+                  class="grow min-w-0 h-10 bg-[#FBFCFC] focus:bg-white border border-[#CFD5E2] focus:border-highlight rounded outline-none outline-[#23262C] px-2 py-1.5"
+                  disabled={noPeersConnected} placeholder={ noPeersConnected ? "Connect to a peer first" : "Send message to all connected peers" } />
         <Button title="Send" classes="shrink-0 w-[105px] md:w-[115px] h-10 ml-2" disabled={noPeersConnected || messageToSend.trim().length === 0} onClick={sendMessage} />
       </div>
     </div>
