@@ -18,6 +18,7 @@
   let openButtonDisabled: boolean = $derived(ownId.trim().length == 0)
 
   let idToConnectTo: string = $state("")
+  let connectToInputRef: HTMLInputElement | undefined = $state()
   let connectButtonDisabled: boolean = $derived(isConnected == false || idToConnectTo.trim().length == 0)
 
   let connectedPeers: ConnectedPeer[] = $state([])
@@ -26,6 +27,7 @@
   let receivedMessages: ReceivedMessage[] = $state([])
 
   let messageToSend: string = $state("")
+  let sendMessageInputRef: HTMLInputElement | undefined = $state()
 
   const log = DI.log
 
@@ -33,11 +35,16 @@
     connectionOpened(ownId: string): void {
       isConnected = true
       receivedMessage(ReceivedMessageType.Info, `Connection successfully opened, others can now connect to you by id '${ownId}'`)
+      connectToInputRef?.focus()
     },
 
     peerConnected(peer: ConnectedPeer): void {
       connectedPeers.push(peer)
       receivedMessage(ReceivedMessageType.Info, `Peer connected: ${peer}`, peer)
+
+      if (connectToInputRef?.value?.toLowerCase() === peer.displayName.toLowerCase()) {
+        setTimeout(() => sendMessageInputRef?.focus(), 10)
+      }
     },
 
     messageReceived(message: string, peer: ConnectedPeer): void {
@@ -121,6 +128,10 @@
       list?.scrollTo(0, list?.scrollHeight)
     }, 100) // give DOM same time to add new message and render before scrolling to the new message
   }
+
+  function isFocused(element?: Element): boolean {
+    return document.activeElement === element
+  }
 </script>
 
 
@@ -140,7 +151,8 @@
 
     <div class="flex items-center h-10 my-1">
       <div class="shrink-0 w-[74px] md:w-[92px] mr-2">Connect to</div>
-      <TextInput inputClasses="grow min-w-0 h-full" bind:value={idToConnectTo} placeholder={ isConnected ? "Peer ID" : "Connect first" } onEnterPressed={connectTo} />
+      <TextInput inputClasses="grow min-w-0 h-full" bind:value={idToConnectTo} bind:inputRef={connectToInputRef}
+                 placeholder={ isConnected ? "Peer ID" : "Connect first" } onEnterPressed={connectTo} />
       <Button title="Connect" classes="shrink-0 w-[105px] md:w-[115px] h-10 ml-2" disabled={connectButtonDisabled} onClick={connectTo} />
     </div>
   </div>
@@ -179,8 +191,8 @@
       </div>
 
       <div class="w-full mt-2 mb-3.5 flex items-center">
-        <TextInput inputClasses="grow min-w-0 h-full" bind:value={messageToSend} disabled={noPeersConnected} onEnterPressed={sendMessage}
-                   placeholder={ noPeersConnected ? "Connect to a peer first" : "Send message to all connected peers" } />
+        <TextInput inputClasses="grow min-w-0 h-full" bind:value={messageToSend} bind:inputRef={sendMessageInputRef} disabled={noPeersConnected}
+                   onEnterPressed={sendMessage} placeholder={ noPeersConnected ? "Connect to a peer first" : "Send message to all connected peers" } />
         <Button title="Send" classes="shrink-0 w-[105px] md:w-[115px] h-10 ml-2" disabled={noPeersConnected || messageToSend.trim().length === 0} onClick={sendMessage} />
       </div>
     </div>
